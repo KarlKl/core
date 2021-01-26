@@ -40,6 +40,7 @@ class EnOceanDongle:
 
         self.__communicator = SerialCommunicator(port=ser, callback=self.callback)
         self.__communicator.start()
+        _LOGGER.debug('The Base ID of your module is %s.' % self.__communicator.base_id)
         self.hass = hass
         self.hass.helpers.dispatcher.dispatcher_connect(
             SIGNAL_SEND_MESSAGE, self._send_message_callback
@@ -47,7 +48,17 @@ class EnOceanDongle:
 
     def _send_message_callback(self, command):
         """Send a command through the EnOcean dongle."""
+#        self.__communicator.base_id = [0xFF,0xDA,0x5E,0x80]
+#        self.__communicator.base_id = [0x5,0x8,0x2C,0x37]
+#        self.__communicator.base_id = [0xff, 0x99, 0x87, 0x01]
+        _LOGGER.debug("Sender ID: %s", self.__communicator.base_id)
+        _LOGGER.debug("Sending radio packet: %s", command)
+#        base_id_location = 4
+#        for i in range(len(self.__communicator.base_id)):
+#            command.data[base_id_location + i] = self.__communicator.base_id[i]
+#        _LOGGER.debug("Test: %s", command)
         self.__communicator.send(command)
+#        self.__communicator.send(RadioPacket.create(rorg=0xd2, rorg_func=0x10, rorg_type=0x01, destination=[0x05,0x08,0x2C,0x37], sender=[0xFF,0xDA,0x5E,0x80], command=1))
 
     def callback(self, packet):
         """Handle EnOcean device's callback.
@@ -89,3 +100,5 @@ class EnOceanDevice(Entity):
 
         packet = Packet(packet_type, data=data, optional=optional)
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
+
+
