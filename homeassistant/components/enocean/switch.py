@@ -8,11 +8,13 @@ from homeassistant.helpers.entity import ToggleEntity
 
 from .device import EnOceanEntity
 
+CONF_SENDER_ID = "sender_id"
 CONF_CHANNEL = "channel"
 DEFAULT_NAME = "EnOcean Switch"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
+        vol.Required(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_CHANNEL, default=0): cv.positive_int,
@@ -25,20 +27,22 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     channel = config.get(CONF_CHANNEL)
     dev_id = config.get(CONF_ID)
     dev_name = config.get(CONF_NAME)
+    sender_id = config.get(CONF_SENDER_ID)
 
-    add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
+    add_entities([EnOceanSwitch(dev_id, dev_name, channel, sender_id)])
 
 
 class EnOceanSwitch(EnOceanEntity, ToggleEntity):
     """Representation of an EnOcean switch device."""
 
-    def __init__(self, dev_id, dev_name, channel):
+    def __init__(self, dev_id, dev_name, channel, sender_id):
         """Initialize the EnOcean switch device."""
         super().__init__(dev_id, dev_name)
         self._light = None
         self._on_state = False
         self._on_state2 = False
         self.channel = channel
+        self._sender_id = sender_id
 
     @property
     def is_on(self):
@@ -55,8 +59,11 @@ class EnOceanSwitch(EnOceanEntity, ToggleEntity):
         optional = [0x03]
         optional.extend(self.dev_id)
         optional.extend([0xFF, 0x00])
+        command = [0xD2, 0x01, self.channel & 0xFF, 0x64]
+        command.append(self._sender_id)
+        command.append([0x00])
         self.send_command(
-            data=[0xD2, 0x01, self.channel & 0xFF, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00],
+            data=command,
             optional=optional,
             packet_type=0x01,
         )
